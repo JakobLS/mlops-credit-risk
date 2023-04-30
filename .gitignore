@@ -1,5 +1,10 @@
 .DS_Store
 
+# MLflow experiment files
+mlflow.db
+model-orchestration-and-tracking/artifacts/
+model-orchestration-and-tracking/mlruns/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
