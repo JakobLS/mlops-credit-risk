@@ -82,7 +82,7 @@ def plot_cv_scores(scores, figsize=(12, 5), log_to_mlflow=False,
     for i, name in enumerate(['AUC', 'Specificity', 'Recall', 'Accuracy']):
         sns.boxplot(data=get_results(scores, name).values, ax=axs[i])
         axs[i].set_title(name, size=18)
-        axs[i].set_xticks([0, 1], ['Train', 'Test'], size=12)
+        axs[i].set_xticks([0, 1], ['Train', 'Val'], size=12)
         add_median_labels(axs[i])
 
     # Log plot with MLflow
