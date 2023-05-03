@@ -4,6 +4,7 @@
 mlflow.db
 model-orchestration-and-tracking/artifacts/
 model-orchestration-and-tracking/mlruns/
+notebooks/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
