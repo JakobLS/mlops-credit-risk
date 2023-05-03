@@ -80,26 +80,35 @@ def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name):
                                  return_train_score=True, scoring=scoring)
     
     # Log results with MLflow
-    log_results_with_mlflow(bs_lgbm.cv_results_, bs_lgbm.best_estimator_, 
-                            top_n, experiment_name)
+    log_results_with_mlflow(X, Y, bs_lgbm.cv_results_, bs_lgbm.best_estimator_, 
+                            top_n, experiment_name, tags, lgbm_scores, test_path, 
+                            predictions_path)
 
     # Return the best model and its CV scores
     return bs_lgbm, lgbm_scores
 
 
-def log_results_with_mlflow(cv_results, best_model, top_n, experiment_name):
+def log_results_with_mlflow(X, Y, cv_results, best_model, top_n, 
+                            experiment_name, tags, cv_scores, test_path, 
+                            predictions_path):
     # Extract the top_n best results based on AUC
     top5_df = pd.DataFrame(cv_results).sort_values(
         by='mean_test_auc', 
         ascending=False,
     ).iloc[:top_n, :].reset_index(drop=True)
+
+    # Rename columns from test to validate
+    cols = top5_df.columns
+    top5_df = top5_df.rename(
+        columns=dict(zip(cols, 
+                        [c.replace('test', 'val') for c in cols])))
     metrics_columns = [c for c in top5_df.columns if not c.startswith('param')]
 
     # Log the results with MLflow
     for i in range(top_n):
         with mlflow.start_run() as run:
             # Add tag on run
-            mlflow.set_tags({"model": "LightGBM"})
+            mlflow.set_tags(tags=tags)
 
             # Store parameters
             mlflow.log_params(dict(top5_df['params'][i]))
@@ -147,9 +156,12 @@ def register_best_model(experiment_name):
     )
 
 
-
 def main(train_path, test_path, output_path, 
-         top_n, experiment_name):
+         top_n, experiment_name, tags):
+    
+    # Convert tags to a dictionary
+    tags = ast.literal_eval(tags)
+
     # Load the data
     data = load_train_data(train_path)
 
@@ -201,16 +213,19 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--top_n",
-        default=5,
-        help="The top n best models to store"
+        default=3,
+        help="The top n best models to track with MLflow"
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--tags",
+        default="{'model': 'LightGBM'}",
+        help="Tags for identifying the model and/or run"
+    )
+    args = vars(parser.parse_args())
 
-    set_mlflow(args.experiment_name)
-    main(args.train_path, args.test_path, args.output_path, 
-         args.top_n, args.experiment_name)
 
-
+    set_mlflow(args['experiment_name'])
+    main(**args)
 
 
 
