@@ -20,6 +20,7 @@ def make_predictions(model_pipeline, data, prediction_path):
 
     # Make and store model predictions
     data['predictions'] = model_pipeline.predict(X)
+    data['prediction_probs'] = model_pipeline.predict_proba(X)[:, 1]
     save_model_predictions(data, prediction_path)
 
     return data

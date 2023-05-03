@@ -1,12 +1,12 @@
 import pandas as pd
-# import numpy as np
 import argparse
 import os
 import pickle
+import ast
 
 from sklearn.model_selection import cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
-from sklearn.metrics import make_scorer, recall_score
+from sklearn.metrics import make_scorer, recall_score, accuracy_score, roc_auc_score
 from imblearn.metrics import specificity_score
 from skopt import BayesSearchCV
 from skopt.space import Integer
@@ -43,7 +43,8 @@ def load_new_data(test_data_path):
     return new_data
 
 
-def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name):
+def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, 
+                         tags, test_path, predictions_path):
     # Specify model and subsequent hyperparameters to tune
     lgbm = LGBMClassifier(random_state=99)
     parameters = {'clf__n_estimators': Integer(10, 200, prior='uniform'),
@@ -118,14 +119,54 @@ def log_results_with_mlflow(X, Y, cv_results, best_model, top_n,
 
             if i == 0:
                 # Log and save the best model
-                # best_model_path = "model"
                 mlflow.sklearn.log_model(
                     sk_model=best_model, 
                     artifact_path="model",
                 )
+
+                # Make cross validated predictions and plot the results
+                predictions = make_cv_predictions(best_model, X, Y)
+                vis.plot_confusion_matrix(Y, predictions, log_to_mlflow=True,
+                                          title="Confusion Matrix on Validation Set")
+                vis.plot_cv_scores(cv_scores, log_to_mlflow=True)
+
+                # Make predictions on test data and log metrics
+                test_data = log_test_metrics_to_mlflow(best_model, test_path, predictions_path)
+
+                # Log ROC AUC curve
+                vis.plot_ROC_AUC_curve(
+                    best_model, 
+                    test_data[test_data.columns.difference(['class'])], 
+                    test_data['class'], 
+                    log_to_mlflow=True,
+                    title="ROC AUC Curve on Test Data",
+                )
+                
     
     # Add the best model to the Model Register
     register_best_model(experiment_name)
+
+
+def log_test_metrics_to_mlflow(model, test_path, predictions_path):
+    """ 
+    Function for making predictions on test data and logging metrics.
+    """
+    # Load test data and make predictions
+    test_data = load_new_data(test_path)
+    test_predictions = make_predictions(model, test_data, predictions_path)
+    y_true = test_predictions['class'].apply(lambda x: 1 if x == 'good' else 0)
+    y_preds = test_predictions['predictions'].apply(lambda x: 1 if x == 'good' else 0)
+
+    # Log metrics
+    mlflow.log_metrics({'test_accuracy': accuracy_score(y_true, y_preds),
+                        'test_auc': roc_auc_score(y_true, 
+                                                  test_predictions['prediction_probs']),
+                        'test_recall': recall_score(y_true, y_preds),
+                        'test_specificity': specificity_score(y_true, y_preds, 
+                                                                average="weighted")
+                        })
+    
+    return test_data
 
 
 def register_best_model(experiment_name):
@@ -142,7 +183,7 @@ def register_best_model(experiment_name):
         experiment_ids=experiment.experiment_id,
         run_view_type=ViewType.ACTIVE_ONLY,
         max_results=1,
-        order_by=["metrics.mean_test_auc DESC"],
+        order_by=["metrics.mean_val_auc DESC"],
     )
 
     if len(best_run) == 0:
@@ -169,21 +210,12 @@ def main(train_path, test_path, output_path,
     X, Y = dp.prepare_data(data)
 
     # Split into train and test sets. 
-    trainX, testX, trainY, testY = train_test_split(X, Y, test_size=0.2, random_state=89)
+    trainX, valX, trainY, valY = train_test_split(X, Y, test_size=0.2, 
+                                                    random_state=89)
 
     # Train and tune model
-    model, scores = train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name)
-
-    # Make cross validated predictions
-    predictions = make_cv_predictions(model, X, Y)
-
-    # Make predictions on new data
-    new_data = load_new_data(test_path)
-    new_predictions = make_predictions(model, new_data, output_path)
-
-    vis.plot_confusion_matrix(Y, predictions)
-    vis.plot_ROC_AUC_curve(model, testX, testY)
-    vis.plot_cv_scores(scores)
+    model, scores = train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, 
+                                         tags, test_path, output_path)
 
 
 

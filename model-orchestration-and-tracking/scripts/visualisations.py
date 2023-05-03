@@ -3,13 +3,15 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
 import seaborn as sns; sns.set()
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay
+import mlflow
 
 
 
-def plot_confusion_matrix(trueY, predictions, figsize=(10, 4)):
-    # Confusion matrix for LightGBM
+def plot_confusion_matrix(trueY, predictions, figsize=(10, 4), log_to_mlflow=False,
+                          title="Confusion Matrix (Normalised & Non-Normalised)"):
+    # Confusion matrix
     f, axs = plt.subplots(1, 2, figsize=figsize)
-    f.suptitle("Confusion Matrix (Normalised & Non-Normalised)", fontsize=16)
+    f.suptitle(title, fontsize=16)
     ConfusionMatrixDisplay.from_predictions(trueY, predictions,
                                             display_labels=['Bad', 'Good'],
                                             normalize="true",
@@ -19,17 +21,25 @@ def plot_confusion_matrix(trueY, predictions, figsize=(10, 4)):
                                             display_labels=['Bad', 'Good'],
                                             normalize=None,
                                             ax=axs[1])
-    axs[1].grid();
+    axs[1].grid()
+
+    # Log plot with MLflow
+    if log_to_mlflow:
+        mlflow.log_figure(f, 'plots/confusion_matrix.png')
 
 
-def plot_ROC_AUC_curve(model, testX, testY, name="LightGBM", figsize=(5, 4)):
+def plot_ROC_AUC_curve(model, testX, testY, name="LightGBM", figsize=(5, 4), 
+                       log_to_mlflow=False, title="ROC AUC Curve on Test Data"):
     # Plot ROC AUC curve on the test set
     f, axs = plt.subplots(1, 1, figsize=figsize)
-    f.suptitle("ROC AUC Curve on Test Data", fontsize=16)
+    f.suptitle(title, fontsize=16)
     RocCurveDisplay.from_estimator(model, testX, testY, 
-                                name=name,
-                                ax=axs,
-    );
+                                  name=name,
+                                  ax=axs,
+    )
+    # Log plot with MLflow
+    if log_to_mlflow:
+        mlflow.log_figure(f, 'plots/ROC_AUC.png')
 
 
 def get_results(df, score):
@@ -58,19 +68,25 @@ def add_median_labels(ax, fmt='.2f'):
         ])
 
 
-def plot_cv_scores(scores, figsize=(12, 5)):
+def plot_cv_scores(scores, figsize=(12, 5), log_to_mlflow=False, 
+                   title="CV Metrics"):
     """ Function for plotting AUC, Specificity, Recall and Accuracy using boxplots.
     """
     # Convert the scores to DataFrames
-    lgbm_scores_c = pd.DataFrame(scores)
+    scores = pd.DataFrame(scores)
 
     # Plot the train and test results for the two models. Use equal y-axis
     f, axs = plt.subplots(1, 4, figsize=figsize, sharey='row')
+    f.suptitle(title, fontsize=16)
 
     for i, name in enumerate(['AUC', 'Specificity', 'Recall', 'Accuracy']):
-        sns.boxplot(data=get_results(lgbm_scores_c, name).values, ax=axs[i])
+        sns.boxplot(data=get_results(scores, name).values, ax=axs[i])
         axs[i].set_title(name, size=18)
         axs[i].set_xticks([0, 1], ['Train', 'Test'], size=12)
         add_median_labels(axs[i])
+
+    # Log plot with MLflow
+    if log_to_mlflow:
+        mlflow.log_figure(f, 'plots/cv_metrics.png')
 
 
