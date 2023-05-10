@@ -43,9 +43,10 @@ def load_new_data(test_data_path):
     new_data = pd.read_csv(test_data_path)
     return new_data
 
+    
+def train_and_tune_model(X, Y, trainX, trainY, **args):
+    args.pop('train_path', None)
 
-def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, description,
-                         tags, test_path, predictions_path):
     # Specify model and subsequent hyperparameters to tune
     lgbm = LGBMClassifier(random_state=99)
     parameters = {'clf__n_estimators': Integer(10, 200, prior='uniform'),
@@ -83,16 +84,22 @@ def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, descripti
     
     # Log results with MLflow
     log_results_with_mlflow(X, Y, trainX, bs_lgbm.cv_results_, bs_lgbm.best_estimator_, 
-                            top_n, experiment_name, description, tags, lgbm_scores, 
-                            test_path, predictions_path)
+                            lgbm_scores, **args)
 
     # Return the best model and its CV scores
     return bs_lgbm, lgbm_scores
 
 
-def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, top_n, 
-                            experiment_name, description, tags, cv_scores, 
-                            test_path, predictions_path):
+def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, 
+                            cv_scores, **args):
+    # Get parameters
+    top_n = args.get('top_n', 5)
+    test_path = args.get('test_path', '')
+    predictions_path = args.get('predictions_path', '')
+    # Convert tags to a dictionary
+    tags = args.get('tags', {})
+    tags = ast.literal_eval(tags)
+
     # Extract the top_n best results based on AUC
     top5_df = pd.DataFrame(cv_results).sort_values(
         by='mean_test_auc', 
@@ -108,7 +115,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, top_n,
 
     # Log the results with MLflow
     for i in range(top_n):
-        with mlflow.start_run(description=description) as run:
+        with mlflow.start_run(description=args.get('description', '')) as run:
             # Add tag on run
             mlflow.set_tags(tags=tags)
 
@@ -147,7 +154,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, top_n,
                 )
     
     # Add the best model to the Model Register
-    register_best_model(experiment_name)
+    register_best_model(experiment_name=args.get('experiment_name', ''))
 
 
 def log_test_metrics_to_mlflow(model, test_path, predictions_path):
@@ -200,11 +207,7 @@ def register_best_model(experiment_name):
     )
 
 
-def main(train_path, test_path, output_path, top_n, 
-         experiment_name, description, tags):
-    
-    # Convert tags to a dictionary
-    tags = ast.literal_eval(tags)
+def main(train_path, test_path, predictions_path):
 
     # Load the data
     data = load_train_data(train_path)
@@ -217,8 +220,7 @@ def main(train_path, test_path, output_path, top_n,
                                                     random_state=89)
 
     # Train and tune model
-    model, scores = train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, 
-                                         description, tags, test_path, output_path)
+    model, scores = train_and_tune_model(X, Y, trainX, trainY, **args)
 
 
 
@@ -237,7 +239,7 @@ if __name__ == "__main__":
         help="Path to unseen test data",
         )
     parser.add_argument(
-        "--output_path", 
+        "--predictions_path", 
         default="../../datasets/predictions/predictions.csv",
         help="Path to where predictions will be stored",
         )

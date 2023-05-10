@@ -9,19 +9,19 @@ def make_cv_predictions(model_pipeline, X, Y):
     return predictions
 
 
-def save_model_predictions(predictions, prediction_path):
+def save_model_predictions(predictions, predictions_path):
     # Save mdoel predictions
-    predictions.to_csv(prediction_path, index=False)
+    predictions.to_csv(predictions_path, index=False)
 
 
-def make_predictions(model_pipeline, data, prediction_path):
+def make_predictions(model_pipeline, data, predictions_path):
     # Prepare the data as before
     X, Y = prepare_data(data)
 
     # Make and store model predictions
     data['predictions'] = model_pipeline.predict(X)
     data['prediction_probs'] = model_pipeline.predict_proba(X)[:, 1]
-    save_model_predictions(data, prediction_path)
+    save_model_predictions(data, predictions_path)
 
     return data
 
