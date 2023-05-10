@@ -15,6 +15,7 @@ from lightgbm import LGBMClassifier
 import mlflow
 from mlflow.tracking import MlflowClient
 from mlflow.entities import ViewType
+from mlflow.models.signature import infer_signature
 
 import data_preparation as dp 
 from model_predictions import make_cv_predictions, make_predictions
@@ -43,7 +44,7 @@ def load_new_data(test_data_path):
     return new_data
 
 
-def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, 
+def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, description,
                          tags, test_path, predictions_path):
     # Specify model and subsequent hyperparameters to tune
     lgbm = LGBMClassifier(random_state=99)
@@ -81,17 +82,17 @@ def train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name,
                                  return_train_score=True, scoring=scoring)
     
     # Log results with MLflow
-    log_results_with_mlflow(X, Y, bs_lgbm.cv_results_, bs_lgbm.best_estimator_, 
-                            top_n, experiment_name, tags, lgbm_scores, test_path, 
-                            predictions_path)
+    log_results_with_mlflow(X, Y, trainX, bs_lgbm.cv_results_, bs_lgbm.best_estimator_, 
+                            top_n, experiment_name, description, tags, lgbm_scores, 
+                            test_path, predictions_path)
 
     # Return the best model and its CV scores
     return bs_lgbm, lgbm_scores
 
 
-def log_results_with_mlflow(X, Y, cv_results, best_model, top_n, 
-                            experiment_name, tags, cv_scores, test_path, 
-                            predictions_path):
+def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, top_n, 
+                            experiment_name, description, tags, cv_scores, 
+                            test_path, predictions_path):
     # Extract the top_n best results based on AUC
     top5_df = pd.DataFrame(cv_results).sort_values(
         by='mean_test_auc', 
@@ -107,7 +108,7 @@ def log_results_with_mlflow(X, Y, cv_results, best_model, top_n,
 
     # Log the results with MLflow
     for i in range(top_n):
-        with mlflow.start_run() as run:
+        with mlflow.start_run(description=description) as run:
             # Add tag on run
             mlflow.set_tags(tags=tags)
 
@@ -118,10 +119,12 @@ def log_results_with_mlflow(X, Y, cv_results, best_model, top_n,
             mlflow.log_metrics(top5_df[metrics_columns].iloc[i, :].to_dict())
 
             if i == 0:
-                # Log and save the best model
+                # Log and save the best model. Include signature
+                signature = infer_signature(trainX, best_model.predict(trainX))
                 mlflow.sklearn.log_model(
                     sk_model=best_model, 
                     artifact_path="model",
+                    signature=signature,
                 )
 
                 # Make cross validated predictions and plot the results
@@ -131,7 +134,8 @@ def log_results_with_mlflow(X, Y, cv_results, best_model, top_n,
                 vis.plot_cv_scores(cv_scores, log_to_mlflow=True)
 
                 # Make predictions on test data and log metrics
-                test_data = log_test_metrics_to_mlflow(best_model, test_path, predictions_path)
+                test_data = log_test_metrics_to_mlflow(best_model, 
+                                                       test_path, predictions_path)
 
                 # Log ROC AUC curve
                 vis.plot_ROC_AUC_curve(
@@ -141,7 +145,6 @@ def log_results_with_mlflow(X, Y, cv_results, best_model, top_n,
                     log_to_mlflow=True,
                     title="ROC AUC Curve on Test Data",
                 )
-                
     
     # Add the best model to the Model Register
     register_best_model(experiment_name)
@@ -197,8 +200,8 @@ def register_best_model(experiment_name):
     )
 
 
-def main(train_path, test_path, output_path, 
-         top_n, experiment_name, tags):
+def main(train_path, test_path, output_path, top_n, 
+         experiment_name, description, tags):
     
     # Convert tags to a dictionary
     tags = ast.literal_eval(tags)
@@ -215,7 +218,7 @@ def main(train_path, test_path, output_path,
 
     # Train and tune model
     model, scores = train_and_tune_model(X, Y, trainX, trainY, top_n, experiment_name, 
-                                         tags, test_path, output_path)
+                                         description, tags, test_path, output_path)
 
 
 
@@ -245,13 +248,18 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--top_n",
-        default=3,
+        default=5,
         help="The top n best models to track with MLflow"
     )
     parser.add_argument(
         "--tags",
-        default="{'model': 'LightGBM'}",
+        default="{'model': 'LightGBM', 'developer': 'Jakob'}",
         help="Tags for identifying the model and/or run"
+    )
+    parser.add_argument(
+        "--description",
+        default="Training model for Predicting the Credit Risk of an Individual",
+        help="A description of the experiment."
     )
     args = vars(parser.parse_args())
 
