@@ -94,8 +94,8 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model,
                             cv_scores, **args):
     # Get parameters
     top_n = args.get('top_n', 5)
-    test_path = args.get('test_path', '')
-    predictions_path = args.get('predictions_path', '')
+    test_path = args.get('test_path', None)
+    predictions_path = args.get('predictions_path', None)
     # Convert tags to a dictionary
     tags = args.get('tags', {})
     tags = ast.literal_eval(tags)
