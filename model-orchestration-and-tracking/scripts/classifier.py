@@ -90,14 +90,9 @@ def train_and_tune_model(X, Y, trainX, trainY, **args):
     return bs_lgbm, lgbm_scores
 
 
-def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, 
-                            cv_scores, **args):
-    # Get parameters
-    top_n = args.get('top_n', 5)
-    test_path = args.get('test_path', None)
-    predictions_path = args.get('predictions_path', None)
+def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top_n, 
+                            test_path, predictions_path, experiment_name, tags, description):
     # Convert tags to a dictionary
-    tags = args.get('tags', {})
     tags = ast.literal_eval(tags)
 
     # Extract the top_n best results based on AUC
@@ -115,7 +110,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model,
 
     # Log the results with MLflow
     for i in range(top_n):
-        with mlflow.start_run(description=args.get('description', '')) as run:
+        with mlflow.start_run(description) as run:
             # Add tag on run
             mlflow.set_tags(tags=tags)
 
@@ -154,7 +149,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model,
                 )
     
     # Add the best model to the Model Register
-    register_best_model(experiment_name=args.get('experiment_name', ''))
+    register_best_model(experiment_name)
 
 
 def log_test_metrics_to_mlflow(model, test_path, predictions_path):
@@ -207,7 +202,8 @@ def register_best_model(experiment_name):
     )
 
 
-def main(train_path, test_path, predictions_path):
+def main(train_path, test_path, predictions_path, top_n, 
+         experiment_name, tags, description):
 
     # Load the data
     data = load_train_data(train_path)
