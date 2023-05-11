@@ -18,7 +18,7 @@ from mlflow.entities import ViewType
 from mlflow.models.signature import infer_signature
 
 import data_preparation as dp 
-from model_predictions import make_cv_predictions, make_predictions
+import model_predictions as mp
 import visualisations as vis
 
 
@@ -110,7 +110,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top
 
     # Log the results with MLflow
     for i in range(top_n):
-        with mlflow.start_run(description) as run:
+        with mlflow.start_run(description=description) as run:
             # Add tag on run
             mlflow.set_tags(tags=tags)
 
@@ -130,7 +130,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top
                 )
 
                 # Make cross validated predictions and plot the results
-                predictions = make_cv_predictions(best_model, X, Y)
+                predictions = mp.make_cv_predictions(best_model, X, Y)
                 vis.plot_confusion_matrix(Y, predictions, log_to_mlflow=True,
                                           title="Confusion Matrix on Validation Set")
                 vis.plot_cv_scores(cv_scores, log_to_mlflow=True)
@@ -158,7 +158,7 @@ def log_test_metrics_to_mlflow(model, test_path, predictions_path):
     """
     # Load test data and make predictions
     test_data = load_new_data(test_path)
-    test_predictions = make_predictions(model, test_data, predictions_path)
+    test_predictions = mp.make_predictions(model, test_data, predictions_path)
     y_true = test_predictions['class'].apply(lambda x: 1 if x == 'good' else 0)
     y_preds = test_predictions['predictions'].apply(lambda x: 1 if x == 'good' else 0)
 
@@ -198,12 +198,14 @@ def register_best_model(experiment_name):
     model_uri=f"runs:/{best_run[0].info.run_id}/model" 
     mlflow.register_model(
         model_uri=model_uri,
-        name=f"best-model-{experiment_name}"
+        name=experiment_name,
     )
 
 
-def main(train_path, test_path, predictions_path, top_n, 
-         experiment_name, tags, description):
+def main(train_path, test_path, predictions_path, registry_predictions_path,
+          top_n, experiment_name, tags, description):
+    # Get and remove the model registry path from args
+    registry_predictions_path = args.pop("registry_predictions_path")
 
     # Load the data
     data = load_train_data(train_path)
@@ -217,6 +219,14 @@ def main(train_path, test_path, predictions_path, top_n,
 
     # Train and tune model
     model, scores = train_and_tune_model(X, Y, trainX, trainY, **args)
+
+    # Make predictions with model from Model Registry in production stage
+    predictions = mp.make_predictions_with_model_registry_model(
+        model_name=experiment_name, 
+        data_path=test_path, 
+        output_path=registry_predictions_path,
+        stage="Production",
+    )
 
 
 
@@ -238,6 +248,11 @@ if __name__ == "__main__":
         "--predictions_path", 
         default="../../datasets/predictions/predictions.csv",
         help="Path to where predictions will be stored",
+        )
+    parser.add_argument(
+        "--registry_predictions_path", 
+        default="../../datasets/predictions/registry_predictions.csv",
+        help="Path to where predictions made by the model fetched from the Model Registry are stored",
         )
     parser.add_argument(
         "--experiment_name",
