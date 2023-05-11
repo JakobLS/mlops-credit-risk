@@ -17,6 +17,11 @@ from mlflow.tracking import MlflowClient
 from mlflow.entities import ViewType
 from mlflow.models.signature import infer_signature
 
+from prefect import flow, task
+from prefect.task_runners import SequentialTaskRunner
+from prefect.deployments import Deployment
+from prefect.orion.schemas.schedules import CronSchedule, IntervalSchedule
+
 import data_preparation as dp 
 import model_predictions as mp
 import visualisations as vis
@@ -29,6 +34,7 @@ def set_mlflow(experiment_name):
     mlflow.set_experiment(experiment_name)
 
 
+@task
 def load_train_data(train_data_path):
     # Start by loading the train data
     data = pd.read_csv(train_data_path)
@@ -44,6 +50,7 @@ def load_new_data(test_data_path):
     return new_data
 
     
+@task
 def train_and_tune_model(X, Y, trainX, trainY, **args):
     args.pop('train_path', None)
 
@@ -202,6 +209,8 @@ def register_best_model(experiment_name):
     )
 
 
+@flow(name="Recurring Credit Risk Model Flow",
+      task_runner=SequentialTaskRunner)
 def main(train_path, test_path, predictions_path, registry_predictions_path,
           top_n, experiment_name, tags, description):
     # Get and remove the model registry path from args
@@ -278,7 +287,19 @@ if __name__ == "__main__":
 
 
     set_mlflow(args['experiment_name'])
-    main(**args)
+
+
+    # TODO: add args to build_from_flow
+    deployment = Deployment.build_from_flow(
+        flow=main,
+        name=args['experiment_name'],
+        schedule=IntervalSchedule(interval=60, timezone="Europe/Madrid"),
+        # schedule=CronSchedule(cron="0 9 15 * *", timezone="Europe/Madrid"),
+        version=1,
+        tags=['ml_deployment', 'fast_experimentation']
+    )
+    deployment.apply()
+    # main(**args)
 
 
 

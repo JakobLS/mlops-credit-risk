@@ -1,5 +1,6 @@
 from sklearn.model_selection import cross_val_predict
 import mlflow
+from prefect import task
 
 from data_preparation import prepare_data
 from classifier import load_new_data
@@ -30,6 +31,7 @@ def make_predictions(model_pipeline, data, predictions_path):
     return data
 
 
+@task
 def make_predictions_with_model_registry_model(model_name, data_path, output_path, 
                                                stage="Production"):
     """ Function for retreiving model from the Model Registry 
