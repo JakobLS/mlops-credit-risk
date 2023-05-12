@@ -3,6 +3,7 @@ import argparse
 import os
 import pickle
 import ast
+from datetime import timedelta
 
 from sklearn.model_selection import cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
@@ -20,7 +21,7 @@ from mlflow.models.signature import infer_signature
 from prefect import flow, task
 from prefect.task_runners import SequentialTaskRunner
 from prefect.deployments import Deployment
-from prefect.orion.schemas.schedules import CronSchedule, IntervalSchedule
+from prefect.server.schemas.schedules import CronSchedule, IntervalSchedule
 
 import data_preparation as dp 
 import model_predictions as mp
@@ -34,7 +35,7 @@ def set_mlflow(experiment_name):
     mlflow.set_experiment(experiment_name)
 
 
-@task
+@task(name="load_training_data")
 def load_train_data(train_data_path):
     # Start by loading the train data
     data = pd.read_csv(train_data_path)
@@ -50,10 +51,8 @@ def load_new_data(test_data_path):
     return new_data
 
     
-@task
+@task(name="train_and_tune_the_model")
 def train_and_tune_model(X, Y, trainX, trainY, **args):
-    args.pop('train_path', None)
-
     # Specify model and subsequent hyperparameters to tune
     lgbm = LGBMClassifier(random_state=99)
     parameters = {'clf__n_estimators': Integer(10, 200, prior='uniform'),
@@ -88,15 +87,12 @@ def train_and_tune_model(X, Y, trainX, trainY, **args):
     # Run nested cross-validation over 10 folds
     lgbm_scores = cross_validate(bs_lgbm, X, Y, cv=10, n_jobs=-1, verbose=1,
                                  return_train_score=True, scoring=scoring)
-    
-    # Log results with MLflow
-    log_results_with_mlflow(X, Y, trainX, bs_lgbm.cv_results_, bs_lgbm.best_estimator_, 
-                            lgbm_scores, **args)
 
     # Return the best model and its CV scores
     return bs_lgbm, lgbm_scores
 
 
+@task(name="log_all_results_with_mlflow")
 def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top_n, 
                             test_path, predictions_path, experiment_name, tags, description):
     # Convert tags to a dictionary
@@ -154,9 +150,6 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top
                     log_to_mlflow=True,
                     title="ROC AUC Curve on Test Data",
                 )
-    
-    # Add the best model to the Model Register
-    register_best_model(experiment_name)
 
 
 def log_test_metrics_to_mlflow(model, test_path, predictions_path):
@@ -181,6 +174,7 @@ def log_test_metrics_to_mlflow(model, test_path, predictions_path):
     return test_data
 
 
+@task(name="register_the_best_model")
 def register_best_model(experiment_name):
     """ 
     Register the best model in the Model Registry.
@@ -209,7 +203,7 @@ def register_best_model(experiment_name):
     )
 
 
-@flow(name="Recurring Credit Risk Model Flow",
+@flow(name="recurring_credit_risk_model_flow",
       task_runner=SequentialTaskRunner)
 def main(train_path, test_path, predictions_path, registry_predictions_path,
           top_n, experiment_name, tags, description):
@@ -224,10 +218,18 @@ def main(train_path, test_path, predictions_path, registry_predictions_path,
 
     # Split into train and test sets. 
     trainX, valX, trainY, valY = train_test_split(X, Y, test_size=0.2, 
-                                                    random_state=89)
+                                                  random_state=89)
 
     # Train and tune model
     model, scores = train_and_tune_model(X, Y, trainX, trainY, **args)
+
+    # Log results with MLflow
+    args.pop('train_path', None)
+    log_results_with_mlflow(X, Y, trainX, model.cv_results_, model.best_estimator_, 
+                            scores, **args)
+    
+    # Add the best model to the Model Register
+    register_best_model(experiment_name)
 
     # Make predictions with model from Model Registry in production stage
     predictions = mp.make_predictions_with_model_registry_model(
@@ -287,19 +289,19 @@ if __name__ == "__main__":
 
 
     set_mlflow(args['experiment_name'])
+    # main(**args)
 
 
-    # TODO: add args to build_from_flow
     deployment = Deployment.build_from_flow(
         flow=main,
-        name=args['experiment_name'],
-        schedule=IntervalSchedule(interval=60, timezone="Europe/Madrid"),
-        # schedule=CronSchedule(cron="0 9 15 * *", timezone="Europe/Madrid"),
+        name="model_training_and_prediction",
+        parameters={'args': {**args}},
+        schedule=IntervalSchedule(interval=timedelta(minutes=1), timezone='Europe/Madrid'),
+        # schedule=CronSchedule(cron="0 3 * * *", timezone="Europe/Madrid"), # Run it at 03:00 am every day
         version=1,
-        tags=['ml_deployment', 'fast_experimentation']
+        work_queue_name="credit_risk_model",
     )
     deployment.apply()
-    # main(**args)
 
 
 

@@ -31,7 +31,7 @@ def make_predictions(model_pipeline, data, predictions_path):
     return data
 
 
-@task
+@task(name="make_predictions_with_model_registry_model")
 def make_predictions_with_model_registry_model(model_name, data_path, output_path, 
                                                stage="Production"):
     """ Function for retreiving model from the Model Registry 
