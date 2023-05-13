@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patheffects as path_effects
+plt.switch_backend('Agg')
 import seaborn as sns; sns.set()
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay
 import mlflow
