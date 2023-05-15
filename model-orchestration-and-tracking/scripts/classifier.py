@@ -27,6 +27,8 @@ import data_preparation as dp
 import model_predictions as mp
 import visualisations as vis
 
+# Set a unified random_state across the file
+random_state = 100
 
 
 def set_mlflow(experiment_name):
@@ -41,7 +43,7 @@ def load_train_data(train_data_path):
     data = pd.read_csv(train_data_path)
 
     # Randomly shuffle the data to minimise the effect of randomness on our results
-    data = data.sample(frac=1.0, random_state=55)
+    data = data.sample(frac=1.0, random_state=random_state)
 
     return data
 
@@ -54,7 +56,7 @@ def load_new_data(test_data_path):
 @task(name="train_and_tune_the_model")
 def train_and_tune_model(X, Y, trainX, trainY, **args):
     # Specify model and subsequent hyperparameters to tune
-    lgbm = LGBMClassifier(random_state=99)
+    lgbm = LGBMClassifier(random_state=random_state)
     parameters = {'clf__n_estimators': Integer(10, 200, prior='uniform'),
                   'clf__max_depth': Integer(2, 8, prior='uniform'),
                   'clf__num_leaves': Integer(20, 60, prior='uniform'),
@@ -79,7 +81,7 @@ def train_and_tune_model(X, Y, trainX, trainY, **args):
     # Perform hyperparameter tuning with BayesSearchCV over 10 folds with AUC as refit metric.
     # Try only 5 combinations to speed things up
     bs_lgbm = BayesSearchCV(pipeline, parameters, cv=10, scoring=scoring, 
-                           refit="auc", random_state=500, n_iter=5)
+                           refit="auc", random_state=random_state, n_iter=5)
 
     # Fit the BayesSearchCV object to the train data
     bs_lgbm.fit(trainX, trainY)
@@ -218,7 +220,7 @@ def main(train_path, test_path, predictions_path, registry_predictions_path,
 
     # Split into train and test sets. 
     trainX, valX, trainY, valY = train_test_split(X, Y, test_size=0.2, 
-                                                  random_state=89)
+                                                  random_state=random_state)
 
     # Train and tune model
     model, scores = train_and_tune_model(X, Y, trainX, trainY, **args)
