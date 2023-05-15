@@ -22,10 +22,11 @@ from prefect import flow, task
 from prefect.task_runners import SequentialTaskRunner
 from prefect.deployments import Deployment
 from prefect.server.schemas.schedules import CronSchedule, IntervalSchedule
+from prefect.infrastructure import Process
 
-import data_preparation as dp 
-import model_predictions as mp
-import visualisations as vis
+import scripts.data_preparation as dp
+import scripts.model_predictions as mp
+import scripts.visualisations as vis
 
 # Set a unified random_state across the file
 random_state = 100
@@ -36,25 +37,9 @@ def set_mlflow(experiment_name):
     mlflow.set_tracking_uri("http://127.0.0.1:5000")
     mlflow.set_experiment(experiment_name)
 
-
-@task(name="load_training_data")
-def load_train_data(train_data_path):
-    # Start by loading the train data
-    data = pd.read_csv(train_data_path)
-
-    # Randomly shuffle the data to minimise the effect of randomness on our results
-    data = data.sample(frac=1.0, random_state=random_state)
-
-    return data
-
-
-def load_new_data(test_data_path):
-    new_data = pd.read_csv(test_data_path)
-    return new_data
-
     
 @task(name="train_and_tune_the_model")
-def train_and_tune_model(X, Y, trainX, trainY, **args):
+def train_and_tune_model(X, Y, trainX, trainY, **kwargs):
     # Specify model and subsequent hyperparameters to tune
     lgbm = LGBMClassifier(random_state=random_state)
     parameters = {'clf__n_estimators': Integer(10, 200, prior='uniform'),
@@ -95,12 +80,13 @@ def train_and_tune_model(X, Y, trainX, trainY, **args):
 
 
 @task(name="log_all_results_with_mlflow")
-def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top_n, 
-                            test_path, predictions_path, experiment_name, tags, description):
+def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, 
+                            test_path, **kwargs):
     # Convert tags to a dictionary
-    tags = ast.literal_eval(tags)
+    tags = ast.literal_eval(kwargs['tags'])
 
     # Extract the top_n best results based on AUC
+    top_n = kwargs['top_n']
     top5_df = pd.DataFrame(cv_results).sort_values(
         by='mean_test_auc', 
         ascending=False,
@@ -115,7 +101,7 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top
 
     # Log the results with MLflow
     for i in range(top_n):
-        with mlflow.start_run(description=description) as run:
+        with mlflow.start_run(description=kwargs['description']) as run:
             # Add tag on run
             mlflow.set_tags(tags=tags)
 
@@ -142,7 +128,9 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores, top
 
                 # Make predictions on test data and log metrics
                 test_data = log_test_metrics_to_mlflow(best_model, 
-                                                       test_path, predictions_path)
+                                                       test_path, 
+                                                       kwargs['predictions_path'],
+                                                       )
 
                 # Log ROC AUC curve
                 vis.plot_ROC_AUC_curve(
@@ -159,7 +147,7 @@ def log_test_metrics_to_mlflow(model, test_path, predictions_path):
     Function for making predictions on test data and logging metrics.
     """
     # Load test data and make predictions
-    test_data = load_new_data(test_path)
+    test_data = dp.load_new_data(test_path)
     test_predictions = mp.make_predictions(model, test_data, predictions_path)
     y_true = test_predictions['class'].apply(lambda x: 1 if x == 'good' else 0)
     y_preds = test_predictions['predictions'].apply(lambda x: 1 if x == 'good' else 0)
@@ -207,13 +195,14 @@ def register_best_model(experiment_name):
 
 @flow(name="recurring_credit_risk_model_flow",
       task_runner=SequentialTaskRunner)
-def main(train_path, test_path, predictions_path, registry_predictions_path,
-          top_n, experiment_name, tags, description):
-    # Get and remove the model registry path from args
-    registry_predictions_path = args.pop("registry_predictions_path")
-
+def main(train_path, test_path, registry_predictions_path,
+         experiment_name, **kwargs):
+    
+    # Set the mlflow experiment name
+    set_mlflow(experiment_name)
+    
     # Load the data
-    data = load_train_data(train_path)
+    data = dp.load_train_data(train_path)
 
     # Make simple data preparations
     X, Y = dp.prepare_data(data)
@@ -223,12 +212,11 @@ def main(train_path, test_path, predictions_path, registry_predictions_path,
                                                   random_state=random_state)
 
     # Train and tune model
-    model, scores = train_and_tune_model(X, Y, trainX, trainY, **args)
+    model, scores = train_and_tune_model(X, Y, trainX, trainY, **kwargs)
 
     # Log results with MLflow
-    args.pop('train_path', None)
     log_results_with_mlflow(X, Y, trainX, model.cv_results_, model.best_estimator_, 
-                            scores, **args)
+                            scores, test_path, **kwargs)
     
     # Add the best model to the Model Register
     register_best_model(experiment_name)
@@ -249,22 +237,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--train_path", 
-        default="../../datasets/cleaned/train/credit_train.csv",
+        default="../datasets/cleaned/train/credit_train.csv",
         help="Path to train data",
         )
     parser.add_argument(
         "--test_path", 
-        default="../../datasets/cleaned/test/credit_test.csv",
+        default="../datasets/cleaned/test/credit_test.csv",
         help="Path to unseen test data",
         )
     parser.add_argument(
         "--predictions_path", 
-        default="../../datasets/predictions/predictions.csv",
+        default="../datasets/predictions/predictions.csv",
         help="Path to where predictions will be stored",
         )
     parser.add_argument(
         "--registry_predictions_path", 
-        default="../../datasets/predictions/registry_predictions.csv",
+        default="../datasets/predictions/registry_predictions.csv",
         help="Path to where predictions made by the model fetched from the Model Registry are stored",
         )
     parser.add_argument(
@@ -287,26 +275,20 @@ if __name__ == "__main__":
         default="Training model for Predicting the Credit Risk of an Individual",
         help="A description of the experiment."
     )
-    args = vars(parser.parse_args())
-
-
-    set_mlflow(args['experiment_name'])
-    # main(**args)
-
+    kwargs = vars(parser.parse_args())
 
     deployment = Deployment.build_from_flow(
         flow=main,
-        name="model_training_and_prediction",
-        parameters={'args': {**args}},
-        schedule=IntervalSchedule(interval=timedelta(minutes=1), timezone='Europe/Madrid'),
-        # schedule=CronSchedule(cron="0 3 * * *", timezone="Europe/Madrid"), # Run it at 03:00 am every day
+        name="model_training_and_prediction_daily",
+        parameters={'kwargs': {**kwargs}},
+        # schedule=IntervalSchedule(interval=timedelta(minutes=5), timezone='Europe/Madrid'),
+        schedule=CronSchedule(cron="0 3 * * *", timezone="Europe/Madrid"), # Run it at 03:00 am every day
+        infrastructure=Process(working_dir=os.getcwd()), # Run flows from current local directory
         version=1,
-        work_queue_name="credit_risk_model",
+        work_queue_name="credit_risk_model-dev",
+        tags=['dev']
     )
+
     deployment.apply()
-
-
-
-
 
 

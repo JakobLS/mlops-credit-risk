@@ -2,8 +2,7 @@ from sklearn.model_selection import cross_val_predict
 import mlflow
 from prefect import task
 
-from data_preparation import prepare_data
-from classifier import load_new_data
+from .data_preparation import prepare_data, load_new_data
 
 
 

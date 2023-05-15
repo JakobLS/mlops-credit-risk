@@ -4,7 +4,27 @@ from sklearn.preprocessing import OrdinalEncoder
 from sklearn.feature_selection import SelectKBest, chi2
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
+from prefect import task
 
+
+# Set a unified random_state across the file
+random_state = 100
+
+
+@task(name="load_training_data")
+def load_train_data(train_data_path):
+    # Start by loading the train data
+    data = pd.read_csv(train_data_path)
+
+    # Randomly shuffle the data to minimise the effect of randomness on our results
+    data = data.sample(frac=1.0, random_state=random_state)
+
+    return data
+
+
+def load_new_data(test_data_path):
+    new_data = pd.read_csv(test_data_path)
+    return new_data
 
 
 def prepare_data(data):
