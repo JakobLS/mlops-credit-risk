@@ -65,8 +65,9 @@ def train_and_tune_model(X, Y, trainX, trainY, **kwargs):
 
     # Perform hyperparameter tuning with BayesSearchCV over 10 folds with AUC as refit metric.
     # Try only 5 combinations to speed things up
+    n_iter = kwargs['n_iter']
     bs_lgbm = BayesSearchCV(pipeline, parameters, cv=10, scoring=scoring, 
-                           refit="auc", random_state=random_state, n_iter=5)
+                           refit="auc", random_state=random_state, n_iter=n_iter)
 
     # Fit the BayesSearchCV object to the train data
     bs_lgbm.fit(trainX, trainY)
@@ -264,6 +265,11 @@ if __name__ == "__main__":
         "--top_n",
         default=5,
         help="The top n best models to track with MLflow"
+    )
+    parser.add_argument(
+        "--n_iter",
+        default=5,
+        help="The number of parameter combinations to try during hyper-parameter tuning. Higher values will take longer but can also yield better models."
     )
     parser.add_argument(
         "--tags",
