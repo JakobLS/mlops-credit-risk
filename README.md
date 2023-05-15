@@ -29,7 +29,7 @@ The advantage with using such a small dataset is that we get to experiment faste
     - [x] Model Pipeline for Tuning and Training
     - [x] Evaluate and Analyse Model Performance
 - [x] Experiment Tracking
-- [] Workflow Orchestration
+- [x] Workflow Orchestration
 - [] Web Service to Expose the Model Predictions
 - [] Model Monitoring
 - [] Tests
