@@ -34,7 +34,7 @@ Before we can track the runs with MLFlow and schedule them a desired using Prefe
     Where the `default-agent-pool` is the name of the agent and the `credit_risk_model-dev` refers to the `work_queue_name` specified in the `main.py` file. 
 
 
-### 3. Run `main.py` to add runs to the Queue
+### 3. Run `main.py` to add runs to the Prefect Queue
 
 Run `main.py` in the Terminal from this folder:
 
