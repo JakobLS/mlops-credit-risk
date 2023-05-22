@@ -86,19 +86,20 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores,
     # Convert tags to a dictionary
     tags = ast.literal_eval(kwargs['tags'])
 
-    # Extract the top_n best results based on AUC
-    top_n = kwargs['top_n']
-    top5_df = pd.DataFrame(cv_results).sort_values(
-        by='mean_test_auc', 
-        ascending=False,
-    ).iloc[:top_n, :].reset_index(drop=True)
-
-    # Rename columns from test to validate
+    # Create dataframe and rename columns from test to validate
+    top5_df = pd.DataFrame(cv_results)
     cols = top5_df.columns
     top5_df = top5_df.rename(
         columns=dict(zip(cols, 
                         [c.replace('test', 'val') for c in cols])))
     metrics_columns = [c for c in top5_df.columns if not c.startswith('param')]
+
+    # Extract the top_n best results based on validation AUC
+    top_n = kwargs['top_n']
+    top5_df = top5_df.sort_values(
+        by='mean_val_auc', 
+        ascending=False,
+    ).iloc[:top_n, :].reset_index(drop=True)
 
     # Log the results with MLflow
     for i in range(top_n):
@@ -194,7 +195,7 @@ def register_best_model(experiment_name):
     )
 
 
-@flow(name="recurring_credit_risk_model_flow",
+@flow(name="recurring_credit_risk_model",
       task_runner=SequentialTaskRunner)
 def main(train_path, test_path, registry_predictions_path,
          experiment_name, **kwargs):
@@ -291,8 +292,8 @@ if __name__ == "__main__":
         schedule=CronSchedule(cron="0 3 * * *", timezone="Europe/Madrid"), # Run it at 03:00 am every day
         infrastructure=Process(working_dir=os.getcwd()), # Run flows from current local directory
         version=1,
-        work_queue_name="credit_risk_model-dev",
-        tags=['dev']
+        work_queue_name="credit_risk_model-dev-test",
+        # tags=['dev'],
     )
 
     deployment.apply()
