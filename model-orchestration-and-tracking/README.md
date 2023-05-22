@@ -42,6 +42,12 @@ Run `main.py` from a fourth Terminal window from this folder:
 python main.py
 ```
 
+<br><br>
 
+### Remember to
+
+Finally, make sure that the Work Pool is **toggled on** so the agent actually picks up the scheduled jobs from the queue. 
+
+![](../images/work-pools.png)
 
 
