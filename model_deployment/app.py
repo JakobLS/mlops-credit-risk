@@ -78,10 +78,17 @@ def make_predictions_with_model_registry_model(model_name, data):
         model = mlflow.sklearn.load_model(model_uri=f"models:/{model_name}/production")
         data['predicted_risk'] = model.predict(X)
         data['prediction_probs'] = model.predict_proba(X)[:, 1].round(4)
+
+        # Move the prediction column first
+        preds = data.pop("predicted_risk")
+        data.insert(0, "predicted_risk", preds)
+
+        return data
+    
     except Exception as e:
         print(e) 
-
-    return data
+        
+        return data
 
 
 def parse_content(content, filename):
@@ -107,9 +114,6 @@ def parse_content(content, filename):
         model_name="Credit Risk Prediction Model", 
         data=df,
     )
-    # Move the prediction column first
-    preds = predictions.pop("predicted_risk")
-    predictions.insert(0, "predicted_risk", preds)
 
     return html.Div([
         html.H5(filename, style={'margin': '2vh 0'}),
