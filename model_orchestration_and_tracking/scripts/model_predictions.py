@@ -44,12 +44,12 @@ def make_predictions_with_model_registry_model(model_name, data_path, output_pat
     # Load the model and make predictions
     try:
         model = mlflow.sklearn.load_model(model_uri=f"models:/{model_name}/{stage}")
+        data['predictions'] = model.predict(X)
+        data['prediction_probs'] = model.predict_proba(X)[:, 1]
+        
+        save_model_predictions(data, output_path)
     except:
         raise 
-
-    data['predictions'] = model.predict(X)
-    data['prediction_probs'] = model.predict_proba(X)[:, 1]
-    save_model_predictions(data, output_path)
 
     return data
 
