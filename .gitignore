@@ -2,8 +2,8 @@
 
 # MLflow experiment files
 mlflow.db
-model-orchestration-and-tracking/artifacts/
-model-orchestration-and-tracking/mlruns/
+model_orchestration_and_tracking/artifacts/
+model_orchestration_and_tracking/mlruns/
 notebooks/
 
 # Byte-compiled / optimized / DLL files
