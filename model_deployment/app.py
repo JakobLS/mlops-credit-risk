@@ -12,11 +12,11 @@ import dash_bootstrap_components as dbc
 import mlflow
 
 
-server = Flask(__name__)
-app = dash.Dash(server=server, external_stylesheets=[dbc.themes.FLATLY])
-app.title = "Credit Risk"
+credit_app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])
+server = credit_app.server
+credit_app.title = "Credit Risk"
 
-app.layout = dbc.Container([
+credit_app.layout = dbc.Container([
     dbc.Row(
         dbc.Col(
             html.H2("Risk-O-Meter"), 
@@ -87,7 +87,7 @@ def make_predictions_with_model_registry_model(model_name, data):
     
     except Exception as e:
         print(e) 
-        
+
         return data
 
 
@@ -150,7 +150,7 @@ def parse_content(content, filename):
     ])
 
 
-@app.callback(Output('output-data-upload', 'children'),
+@credit_app.callback(Output('output-data-upload', 'children'),
               Input('upload-data', 'contents'),
               State('upload-data', 'filename'))
 def update_output(content, names):
@@ -162,6 +162,6 @@ def update_output(content, names):
 
 
 if __name__ == "__main__":
-    app.run_server(debug=False, port=8090)
+    credit_app.run_server(debug=False, port=8090)
 
 
