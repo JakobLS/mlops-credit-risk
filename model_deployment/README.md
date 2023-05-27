@@ -37,4 +37,17 @@ The app is then accessible via the same url as before.
 
 ## Docker Deployment
 
+From the main project folder, where the `Dockerfile` is located, run:
+
+```bash
+docker build -t credit-risk .
+```
+Followed by
+
+```bash
+docker run -it --rm -p 8090:8090 credit-risk:latest
+```
+
+This will start up the server. Navigate to `http://0.0.0.0:8090/` to see the live app. 
+
 
