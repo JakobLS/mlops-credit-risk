@@ -6,6 +6,12 @@ model_orchestration_and_tracking/artifacts/
 model_orchestration_and_tracking/mlruns/
 notebooks/
 
+# Predictions
+datasets/predictions/*.csv
+
+# MLFlow secrets
+secrets/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
