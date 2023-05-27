@@ -34,7 +34,7 @@ random_state = 100
 
 def set_mlflow(experiment_name):
     # Specify MLflow parameters
-    mlflow.set_tracking_uri("http://127.0.0.1:5000")
+    mlflow.set_tracking_uri("")
     mlflow.set_experiment(experiment_name)
 
     
