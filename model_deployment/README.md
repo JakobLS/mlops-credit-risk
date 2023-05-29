@@ -48,6 +48,19 @@ Followed by
 docker run -it --rm -p 8090:8090 credit-risk:latest
 ```
 
-This will start up the server. Navigate to `http://0.0.0.0:8090/` to see the live app. 
+This will start up the server. Navigate to `http://0.0.0.0:8090/` to see and test out the live app! 
+
+
+<br><br>
+
+## Simple Initial Test 
+
+In order to test the model, run the following in this folder:
+
+```bash
+python test_main.py
+```
+
+Accuracy, Precision, Recall and some other metrics should be printed to the terminal. They should be aligned with those from `test_app.py`.
 
 

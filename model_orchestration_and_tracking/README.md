@@ -51,3 +51,17 @@ Finally, make sure that the Work Pool is **toggled on** so the agent actually pi
 ![](../images/work-pools.png)
 
 
+<br><br>
+
+## Simple Initial Test
+
+In order to test the app and the model it's using, run the following in this folder:
+
+```bash
+python ../model_deployment/test_app.py
+```
+
+Head over to `http://127.0.0.1:9696/test` and compare the results with the previous (`test_main.py`) test. 
+
+
+
