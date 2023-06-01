@@ -1,0 +1,39 @@
+datasets:
+  credit_risk:
+    column_mapping:
+      categorical_features:
+        - 'checking_status'
+        - 'credit_history'
+        - 'purpose'
+        - 'savings_status'
+        - 'employment'
+        - 'installment_commitment'
+        - 'personal_status'
+        - 'other_parties'
+        - 'residence_since'
+        - 'property_magnitude'
+        - 'other_payment_plans'
+        - 'housing'
+        - 'existing_credit'
+        - 'job'
+        - 'num_dependents'
+        - 'own_telephone'
+        - 'foreign_worker'
+        - 'class'
+      numerical_features:
+        - 'duration'
+        - 'credit_amount'
+        - 'age'
+    data_format:
+      header: true
+      separator: ','
+    monitors:
+      - data_drift
+    reference_file: ./datasets/test/credit_test.csv
+service:
+  calculation_period_sec: 2
+  min_reference_size: 30
+  moving_reference: false
+  datasets_path: datasets
+  use_reference: true
+  window_size: 5

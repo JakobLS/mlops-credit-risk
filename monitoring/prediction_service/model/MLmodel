@@ -1,0 +1,32 @@
+artifact_path: model
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.9.16
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.2.2
+mlflow_version: 2.3.0
+model_uuid: fb49570bf6ec4bea93f4d1b32b4faec4
+run_id: ef0dc330dd74495e9567ec883dcbe1ba
+signature:
+  inputs: '[{"name": "age", "type": "long"}, {"name": "checking_status", "type": "string"},
+    {"name": "credit_amount", "type": "long"}, {"name": "credit_history", "type":
+    "string"}, {"name": "duration", "type": "long"}, {"name": "employment", "type":
+    "string"}, {"name": "existing_credits", "type": "long"}, {"name": "foreign_worker",
+    "type": "string"}, {"name": "housing", "type": "string"}, {"name": "installment_commitment",
+    "type": "long"}, {"name": "job", "type": "string"}, {"name": "num_dependents",
+    "type": "long"}, {"name": "other_parties", "type": "string"}, {"name": "other_payment_plans",
+    "type": "string"}, {"name": "own_telephone", "type": "string"}, {"name": "personal_status",
+    "type": "string"}, {"name": "property_magnitude", "type": "string"}, {"name":
+    "purpose", "type": "string"}, {"name": "residence_since", "type": "long"}, {"name":
+    "savings_status", "type": "string"}]'
+  outputs: '[{"type": "tensor", "tensor-spec": {"dtype": "object", "shape": [-1]}}]'
+utc_time_created: '2023-05-24 11:17:41.265404'
