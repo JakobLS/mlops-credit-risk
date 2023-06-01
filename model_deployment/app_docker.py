@@ -2,6 +2,7 @@ import base64
 import io
 import os
 import pandas as pd
+import numpy as np
 
 import dash
 from dash import dcc, html, dash_table
@@ -83,7 +84,7 @@ def make_predictions_with_model_registry_model(model_name, data):
         # Load model
         model = mlflow.sklearn.load_model(model_uri=model_uri)
         data['predicted_risk'] = model.predict(X)
-        data['prediction_probs'] = model.predict_proba(X)[:, 1].round(4)
+        data['prediction_probs'] = np.amax(model.predict_proba(X), axis=1).round(4)
 
         # Move the prediction column first
         preds = data.pop("predicted_risk")
@@ -139,14 +140,14 @@ def parse_content(content, filename):
             style_data_conditional=[
                 {
                     'if': {
-                        'filter_query': '{prediction_probs} >= 0.5',
+                        'filter_query': '{predicted_risk} eq "good"',
                         'column_id': 'predicted_risk'
                     },
                     'backgroundColor': '#F0FFF0',
                 },
                 {
                     'if': {
-                        'filter_query': '{prediction_probs} < 0.5',
+                        'filter_query': '{predicted_risk} eq "bad"',
                         'column_id': 'predicted_risk'
                     },
                     'backgroundColor': '#FFE4E1',
