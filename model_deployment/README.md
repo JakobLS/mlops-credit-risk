@@ -2,6 +2,8 @@
 
 The model has been deployed as a web service using Flask and Dash. The resulting dashboard allows the user to interact with the model by submitting CSV or Excel files for prediction. This is a rather simple simulation of how a bank clerk might use a system like this. 
 
+Also, note that we have currently hard-coded the model version to be used in the deployment. To streamline this process, we should aim for storing the model and artifacts in the cloud (such as an S3 bucket or Cloud Storage) which we then can retrieve directly. This would allow us to automatically train and then deploy the best model on a continuous basis. 
+
 
 ## Local Deployment
 
