@@ -42,6 +42,8 @@ services:
 
   prometheus:
     image: prom/prometheus
+    depends_on:
+      - mongo
     volumes:
       - ./evidently_service/config/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
@@ -71,6 +73,7 @@ services:
       - front-tier
     restart: always
   mongo:
+    container_name: mongo
     image: mongo
     ports:
       - "27018:27017"
@@ -78,4 +81,3 @@ services:
       - mongo_data:/data/db
     networks:
       - back-tier
-      - front-tier

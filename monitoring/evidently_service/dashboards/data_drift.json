@@ -34,7 +34,7 @@
       },
       "id": 14,
       "options": {
-        "content": "# Evidently Data Drift Monitoring\n\n  Here can be your information about dashboard and its usage.\n",
+        "content": "# Evidently Data Drift Monitoring for client Credit Risk\n\n  You can add additional information about the dashboard and its usage here.\n",
         "mode": "markdown"
       },
       "pluginVersion": "8.3.6",

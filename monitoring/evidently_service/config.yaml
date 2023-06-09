@@ -12,14 +12,15 @@ datasets:
         - 'other_parties'
         - 'residence_since'
         - 'property_magnitude'
+        - 'age'
         - 'other_payment_plans'
         - 'housing'
-        - 'existing_credit'
+        - 'existing_credits'
         - 'job'
         - 'num_dependents'
         - 'own_telephone'
         - 'foreign_worker'
-        - 'class'
+        - 'target'
       numerical_features:
         - 'duration'
         - 'credit_amount'
@@ -29,7 +30,7 @@ datasets:
       separator: ','
     monitors:
       - data_drift
-    reference_file: ./datasets/test/credit_test.csv
+    reference_file: ./datasets/reference/reference1.csv
 service:
   calculation_period_sec: 2
   min_reference_size: 30
