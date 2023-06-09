@@ -76,15 +76,20 @@ def prepare_data(data):
 
 def save_to_db(records):
     if len(records.index) > 1:
-        collection.insert_many(records)
+        collection.insert_many(records.to_dict('records'))
     else:
-        collection.insert_one(records)
+        collection.insert_one(records.to_dict('records'))
 
 
 def send_to_evidently_service(records):
+    # Evidently expects a list of records. Prepare the data accordingly
+    if len(records) <= 1:
+        records = [records.to_dict('records')]
+    else:
+        records = records.to_dict('records')
     # Post to Evidently, to the location "/iterate/<dataset>" 
     # (check line 216 in evidently_service.py)
-    requests.post(f"{EVIDENTLY_SERVICE_ADDRESS}/iterate/credit_risk", json=[records])
+    requests.post(f"{EVIDENTLY_SERVICE_ADDRESS}/iterate/credit_risk", json=records)
 
 
 def make_predictions_with_model_registry_model(data):
