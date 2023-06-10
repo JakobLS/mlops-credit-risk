@@ -31,7 +31,7 @@ The advantage with using such a small dataset is that we get to experiment faste
 - [x] Experiment Tracking
 - [x] Workflow Orchestration
 - [x] Web Service to Expose the Model Predictions
-- [] Model Monitoring
+- [x] Model Monitoring
 - [] Tests
     - [] Unit Tests
     - [] Integration Tests
