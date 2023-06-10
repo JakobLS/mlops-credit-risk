@@ -44,10 +44,7 @@ def load_reference_data(reference_path, model_path):
 
     # Prepare the data by cleaning the column names and excluding the class
     reference_data.columns = reference_data.columns.str.strip()
-    X = reference_data[reference_data.columns.difference(['class'])]
-
-    # Rename the class column to adhere to Evidently's practices
-    # reference_data.rename(columns={'class': 'target'}, inplace=True)
+    X = reference_data[reference_data.columns.difference(['target'])]
 
     # Make predictions
     reference_data['prediction'] = model.predict(X)
@@ -67,14 +64,20 @@ def load_mongo_data_between(collection_name, from_dt, to_dt):
 def fetch_recent_data(from_dt, to_dt, fetch_by_date=True, nbr_samples=100):
     """ Fetch data from MongoDB.
     """
+    data = pd.DataFrame()
     if fetch_by_date:
         data = load_mongo_data_between("credit_risk_data", from_dt, to_dt)
         data = pd.DataFrame(data)
-    else:
+
+    # If there are fewer than 30 samples for the selected time frame, 
+    # fetch by number of samples
+    if len(data.index) < 30:
         db = mongo_client.get_database("credit_risk_service")
         data = db.get_collection("credit_risk_data").find()
+
         # By default, use the most recent 100 samples
         data = pd.DataFrame(list(data)[-nbr_samples:])
+
     return data
 
 
@@ -87,29 +90,29 @@ def run_evidently(reference_data, new_data):
                                 ClassificationPerformanceProfileSection()])
     mapping = ColumnMapping(prediction='prediction',
                             target='target',
-                            numerical_features=[
+                            categorical_features=[
                                 'checking_status',
                                 'credit_history',
                                 'purpose',
                                 'savings_status',
                                 'employment',
-                                'installment_commitment',
                                 'personal_status',
                                 'other_parties',
-                                'residence_since',
                                 'property_magnitude',
-                                'age',
                                 'other_payment_plans',
                                 'housing',
-                                'existing_credits',
                                 'job',
-                                'num_dependents',
                                 'own_telephone',
                                 'foreign_worker',
                             ],
-                            categorical_features=[
+                            numerical_features=[
                                 'duration', 
                                 'credit_amount',
+                                'installment_commitment',
+                                'residence_since',
+                                'age',
+                                'existing_credits',
+                                'num_dependents',
                             ],
                             datetime_features=[])
     profile.calculate(reference_data, new_data, mapping)
@@ -130,15 +133,17 @@ def save_report(profile, report, unique_name=False):
 
     # If unique_name is set, use current time in the name
     if unique_name:
-        current_time = datetime.now().strftime("%Y-%m-%d_%H:%m")
-    else: current_time = ""
+        current_time = datetime.now().strftime("%Y-%m-%d--%H-%M")
+        filename = f"evidently_report_{current_time}"
+    else: 
+        filename = f"evidently_report"
 
     # Create a new reports folder if not exist
     if not os.path.exists(REPORTS_FOLDER): 
         os.mkdir(REPORTS_FOLDER)
 
     # Save the html report locally
-    report.save(f"{REPORTS_FOLDER}/evidently_report{'-'+current_time}.html")
+    report.save(f"{REPORTS_FOLDER}/{filename}.html")
 
 
 

@@ -98,7 +98,7 @@ def send_to_evidently_service(records):
 
 def save_to_prometheus_db(records):
     """ Function for storing data in Prometheus for visualisation in Grafana.
-        Currently not needed as Evidently receives the metrics directly 
+        --> Currently not needed as Evidently receives the metrics directly 
     """
     registry = CollectorRegistry()
     gauge = Gauge(name="credit_risk_data_objects", 
