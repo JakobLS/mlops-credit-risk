@@ -4,6 +4,7 @@
 mlflow.db
 model_orchestration_and_tracking/artifacts/
 model_orchestration_and_tracking/mlruns/
+model_development/mlruns/
 notebooks/
 
 # Predictions
