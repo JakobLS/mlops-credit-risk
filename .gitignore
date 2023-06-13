@@ -7,6 +7,11 @@ model_orchestration_and_tracking/mlruns/
 model_development/mlruns/
 notebooks/
 
+# Monitoring data
+monitoring/grafana_data/
+monitoring/mongo_data/
+monitoring/prometheus_data/
+
 # Predictions
 datasets/predictions/*.csv
 
