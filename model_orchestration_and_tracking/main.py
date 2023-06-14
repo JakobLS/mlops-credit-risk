@@ -292,7 +292,7 @@ if __name__ == "__main__":
         schedule=CronSchedule(cron="0 3 * * *", timezone="Europe/Madrid"), # Run it at 03:00 am every day
         infrastructure=Process(working_dir=os.getcwd()), # Run flows from current local directory
         version=1,
-        work_queue_name="credit_risk_model-dev-test",
+        work_queue_name="credit_risk_model_queue",
         # tags=['dev'],
     )
 

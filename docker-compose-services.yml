@@ -1,0 +1,72 @@
+version: '3.7'
+
+networks:
+  front-tier:
+        driver: bridge
+  back-tier:
+        driver: bridge
+
+services:
+  mlflow_server:
+    restart: always
+    build:
+      context: ./model_orchestration_and_tracking
+      dockerfile: Dockerfile-mlflow
+    container_name: mlflow_server
+    image: mlflow_server
+    ports:
+      - 5051:5050
+    networks:
+      - back-tier
+    volumes:
+      - /tmp/mlopsdb:/tmp/mlopsdb
+      - /tmp/mlopsartifacts:/tmp/mlopsartifacts
+      - /tmp/store:/tmp/store
+  
+  prefect_server:
+    restart: always
+    build:
+      context: ./model_orchestration_and_tracking
+      dockerfile: Dockerfile-prefect
+    logging:
+      driver: none
+    image: prefect_server
+    container_name: prefect_server
+    ports:
+      - 4200:4200
+      - 8081:8081
+    env_file:
+      - ./model_orchestration_and_tracking/.env
+    networks:
+      - back-tier
+    volumes:
+      - /tmp/mlopsdb:/tmp/mlopsdb
+      - /tmp/mlopsartifacts:/tmp/mlopsartifacts
+      - /tmp/store:/tmp/store
+    
+  prefect_agent:
+    restart: always
+    depends_on:
+      - prefect_server
+      - mlflow_server
+    build:
+      context: ./model_orchestration_and_tracking
+      dockerfile: Dockerfile-prefect-agent
+    image: prefect_agent1
+    container_name: prefect_agent1
+    environment:
+      MONGODB_ADDRESS: "mongodb://127.0.0.1:27017"
+      REPORTS_FOLDER: /tmp/mlreports
+      REPORT_TIME_WINDOW_MINUTES: 180
+      EVIDENTLY_TIME_WIDTH_MINS: 720
+      MODEL_URI: "models:/Credit Risk Prediction Model/Production"
+    volumes:
+      - /tmp/mlopsdb:/tmp/mlopsdb
+      - /tmp/mlopsartifacts:/tmp/mlopsartifacts
+      - /tmp/store:/tmp/store
+      - /tmp/mlreports:/tmp/mlreports
+    networks:
+      - back-tier
+
+
+

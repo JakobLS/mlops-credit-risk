@@ -7,12 +7,14 @@ volumes:
 
 networks:
   front-tier:
+        driver: bridge
   back-tier:
+        driver: bridge
 
 services:
   prediction_service:
     build:
-      context: prediction_service
+      context: monitoring/prediction_service
       dockerfile: Dockerfile
     depends_on:
       - evidently_service
@@ -28,13 +30,13 @@ services:
 
   evidently_service:
     build:
-      context: evidently_service
+      context: monitoring/evidently_service
       dockerfile: Dockerfile
     depends_on:
       - grafana
     volumes:
-      - ./evidently_service/datasets:/app/datasets
-      - ./evidently_service/config.yaml:/app/config.yaml
+      - ./monitoring/evidently_service/datasets:/app/datasets
+      - ./monitoring/evidently_service/config.yaml:/app/config.yaml
     ports:
       - "8877:8877"
     networks:
@@ -46,8 +48,8 @@ services:
     depends_on:
       - mongo
     volumes:
-      - ./evidently_service/config/prometheus.yml:/etc/prometheus/prometheus.yml
-      - prometheus_data:/prometheus
+      - ./monitoring/evidently_service/config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -65,21 +67,22 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ./evidently_service/config/grafana_datasources.yml:/etc/grafana/provisioning/datasources/grafana_datasources.yml:ro
-      - ./evidently_service/config/grafana_dashboards.yml:/etc/grafana/provisioning/dashboards/grafana_dashboards.yml:ro
-      - ./evidently_service/dashboards:/opt/grafana/dashboards
-      - grafana_data:/var/lib/grafana
+      - ./monitoring/evidently_service/config/grafana_datasources.yml:/etc/grafana/provisioning/datasources/grafana_datasources.yml:ro
+      - ./monitoring/evidently_service/config/grafana_dashboards.yml:/etc/grafana/provisioning/dashboards/grafana_dashboards.yml:ro
+      - ./monitoring/evidently_service/dashboards:/opt/grafana/dashboards
+      - ./monitoring/grafana_data:/var/lib/grafana
     networks:
       - back-tier
       - front-tier
     restart: always
-    
+
   mongo:
     container_name: mongo
     image: mongo
     ports:
       - "27018:27017"
     volumes:
-      - mongo_data:/data/db
+      - ./monitoring/mongo_data:/data/db
     networks:
       - back-tier
+

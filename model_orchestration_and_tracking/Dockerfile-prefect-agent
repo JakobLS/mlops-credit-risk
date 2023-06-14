@@ -1,0 +1,25 @@
+FROM python:3.9.16-slim
+
+RUN apt-get update && apt-get upgrade -y
+RUN apt-get install libgomp1
+
+COPY requirements-prefect.txt .
+
+# RUN apt update && install uuid -y
+
+RUN pip install --no-cache-dir prefect==2.10.9
+RUN pip install -r requirements-prefect.txt
+
+RUN prefect config set PREFECT_UI_API_URL="http://prefect_server:4200/api"
+RUN prefect config set PREFECT_API_URL="http://prefect_server:4200/api"
+
+RUN prefect config view
+
+WORKDIR /app
+
+ADD ./scripts scripts/
+COPY ["./main.py", "./test_main.py", "./"]
+
+# Start the agent and then run the main script to add work to the queue
+ENTRYPOINT sleep 15 && prefect agent start --pool default-agent-pool --work-queue credit_risk_model_queue
+CMD ["python", "main.py"]
