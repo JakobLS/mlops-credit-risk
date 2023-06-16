@@ -22,6 +22,7 @@ services:
     environment:
       EVIDENTLY_SERVICE: "http://evidently_service.:8877"
       MONGODB_ADDRESS: "mongodb://mongo.:27017/"
+      MLFLOW_TRACKING_URI: "http://mlflow_server:5050"
     ports:
       - "9696:9696"
     networks:

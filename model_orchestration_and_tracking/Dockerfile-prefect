@@ -1,16 +1,8 @@
 FROM python:3.9.16-slim
 
-# RUN apt-get update && apt-get upgrade -y
-# RUN apt-get install libgomp1
-
 RUN pip install --no-cache-dir prefect==2.10.9
 
 RUN mkdir /tmp/store
-
-# WORKDIR /app
-
-# ADD ./scripts scripts/
-# COPY ["./main.py", "./test_main.py", "./"]
 
 EXPOSE 4200
 EXPOSE 8081

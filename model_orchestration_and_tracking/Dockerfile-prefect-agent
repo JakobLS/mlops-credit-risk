@@ -2,13 +2,16 @@ FROM python:3.9.16-slim
 
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install libgomp1
+# Needed for scikit-optimise
+RUN apt install git -y
 
 COPY requirements-prefect.txt .
 
-# RUN apt update && install uuid -y
-
 RUN pip install --no-cache-dir prefect==2.10.9
+RUN pip install --no-cache-dir prefect-gcp==0.4.2
 RUN pip install -r requirements-prefect.txt
+# We currently need to use the unofficial version of scikit optimise
+RUN pip install git+https://github.com/QuentinSoubeyran/scikit-optimize.git@unofficial
 
 RUN prefect config set PREFECT_UI_API_URL="http://prefect_server:4200/api"
 RUN prefect config set PREFECT_API_URL="http://prefect_server:4200/api"
@@ -21,5 +24,6 @@ ADD ./scripts scripts/
 COPY ["./main.py", "./test_main.py", "./"]
 
 # Start the agent and then run the main script to add work to the queue
-ENTRYPOINT sleep 15 && prefect agent start --pool default-agent-pool --work-queue credit_risk_model_queue
-CMD ["python", "main.py"]
+ENTRYPOINT sleep 15 && prefect agent start --pool default-agent-pool --work-queue credit_risk_model_queue && sleep 5
+
+CMD [ "python3", "./main.py" ]

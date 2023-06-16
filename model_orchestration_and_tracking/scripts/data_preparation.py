@@ -14,7 +14,13 @@ random_state = 100
 @task(name="load_training_data")
 def load_train_data(train_data_path):
     # Start by loading the train data
-    data = pd.read_csv(train_data_path)
+    try:
+        data = pd.read_csv(train_data_path)
+        print("Loading train data locally..")
+
+    except:
+        data = pd.read_csv(f'gs://mlops-credit-risk/{train_data_path}')
+        print("Loading train data from GCP Bucket..")
 
     # Randomly shuffle the data to minimise the effect of randomness on our results
     data = data.sample(frac=1.0, random_state=random_state)
@@ -23,7 +29,13 @@ def load_train_data(train_data_path):
 
 
 def load_new_data(test_data_path):
-    new_data = pd.read_csv(test_data_path)
+    try:
+        new_data = pd.read_csv(test_data_path)
+        print("Loading test data locally..")
+    except:
+        new_data = pd.read_csv(f'gs://mlops-credit-risk/{test_data_path}')
+        print("Loading test data from GCP Bucket..")
+
     return new_data
 
 

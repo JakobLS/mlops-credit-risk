@@ -15,7 +15,12 @@ def make_cv_predictions(model_pipeline, X, Y):
 
 def save_model_predictions(predictions, predictions_path):
     # Save model predictions
-    predictions.to_csv(predictions_path, index=False)
+    try:
+        predictions.to_csv(predictions_path, index=False)
+        print("Saving predictions locally..")
+    except:
+        predictions.to_csv(f'gs://mlops-credit-risk/{predictions_path}', index=False)
+        print("Saving predictions to GCP Bucket..")
 
 
 def make_predictions(model_pipeline, data, predictions_path):
@@ -48,8 +53,9 @@ def make_predictions_with_model_registry_model(model_name, data_path, output_pat
         data['prediction_probs'] = model.predict_proba(X)[:, 1]
         
         save_model_predictions(data, output_path)
-    except:
-        raise 
+    except Exception as e:
+        print("\n***\nNo predictions were made; No model in Production stage.\n***\n")
+        print(e)
 
     return data
 

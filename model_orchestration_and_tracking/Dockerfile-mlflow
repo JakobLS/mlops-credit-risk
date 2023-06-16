@@ -4,12 +4,8 @@ COPY requirements-mlflow.txt .
 
 RUN pip install -r requirements-mlflow.txt
 
-RUN mkdir /tmp/mlops
-WORKDIR /tmp/mlops
-
-RUN mkdir /tmp/mlopsstore
-RUN mkdir /tmp/mlopsartifacts
+WORKDIR /mlops
 
 EXPOSE 5050
 
-CMD mlflow server --backend-store-uri file:///tmp/mlopsstore --port 5050 --default-artifact-root file://tmp/mlopsartifacts --host 0.0.0.0
+CMD mlflow server --backend-store-uri file:///mlops/mlruns --port 5050 --default-artifact-root gs://mlops-credit-risk/mlruns --serve-artifacts --host 0.0.0.0

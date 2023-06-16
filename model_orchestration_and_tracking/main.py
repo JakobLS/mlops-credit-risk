@@ -4,6 +4,7 @@ import os
 import pickle
 import ast
 from datetime import timedelta
+from dotenv import load_dotenv
 
 from sklearn.model_selection import cross_validate, train_test_split
 from sklearn.pipeline import Pipeline
@@ -31,10 +32,18 @@ import scripts.visualisations as vis
 # Set a unified random_state across the file
 random_state = 100
 
+# The .env variable is only used for local deployment
+load_dotenv('.env')
+TRAIN_DATA_PATH = os.getenv("TRAIN_DATA_PATH", "datasets/cleaned/train/credit_train.csv")
+TEST_DATA_PATH = os.getenv("TEST_DATA_PATH", "datasets/cleaned/test/credit_test.csv")
+PREDICTIONS_PATH = os.getenv("PREDICTIONS_PATH", "datasets/predictions/predictions.csv")
+REGISTRY_PREDICTIONS_PATH = os.getenv("REGISTRY_PREDICTIONS_PATH", 
+                                      "datasets/predictions/registry_predictions.csv")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow_server:5050")
 
 def set_mlflow(experiment_name):
     # Specify MLflow parameters
-    mlflow.set_tracking_uri("")
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
     mlflow.set_experiment(experiment_name)
 
     
@@ -223,13 +232,13 @@ def main(train_path, test_path, registry_predictions_path,
     # Add the best model to the Model Register
     register_best_model(experiment_name)
 
-    # Make predictions with model from Model Registry in production stage
-    predictions = mp.make_predictions_with_model_registry_model(
-        model_name=experiment_name, 
-        data_path=test_path, 
-        output_path=registry_predictions_path,
-        stage="Production",
-    )
+    # # Make predictions with model from Model Registry in production stage
+    # predictions = mp.make_predictions_with_model_registry_model(
+    #     model_name=experiment_name, 
+    #     data_path=test_path, 
+    #     output_path=registry_predictions_path,
+    #     stage="Production",
+    # )
 
 
 
@@ -239,22 +248,22 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--train_path", 
-        default="../datasets/cleaned/train/credit_train.csv",
+        default=TRAIN_DATA_PATH,
         help="Path to train data",
         )
     parser.add_argument(
         "--test_path", 
-        default="../datasets/cleaned/test/credit_test.csv",
+        default=TEST_DATA_PATH,
         help="Path to unseen test data",
         )
     parser.add_argument(
         "--predictions_path", 
-        default="../datasets/predictions/predictions.csv",
+        default=PREDICTIONS_PATH,
         help="Path to where predictions will be stored",
         )
     parser.add_argument(
         "--registry_predictions_path", 
-        default="../datasets/predictions/registry_predictions.csv",
+        default=REGISTRY_PREDICTIONS_PATH,
         help="Path to where predictions made by the model fetched from the Model Registry are stored",
         )
     parser.add_argument(
