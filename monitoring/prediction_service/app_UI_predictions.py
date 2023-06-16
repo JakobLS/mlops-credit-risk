@@ -16,7 +16,8 @@ from pymongo import MongoClient
 from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 
 
-MODEL_LOCATION = os.getenv('MODEL_LOCATION', 'model/')
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow_server:5050")
+EXPERIMENT_NAME = os.getenv("EXPERIMENT_NAME", "Credit Risk Prediction Model")
 EVIDENTLY_SERVICE_ADDRESS = os.getenv('EVIDENTLY_SERVICE_ADDRESS', 'http://evidently_service:8877')
 MONGODB_ADDRESS = os.getenv("MONGODB_ADDRESS", "mongodb://127.0.0.1:27017")
 PROMETHEUS_SERVICE_ADDRESS = os.getenv('PROMETHEUS_SERVICE_ADDRESS', 'http://127.0.0.1:9091')
@@ -65,6 +66,12 @@ credit_app.layout = dbc.Container([
     html.Div(id='output-data-upload', style={'width': '100%',
                                              'height': '80%'}),
 ])
+
+
+def set_mlflow():
+    # Specify MLflow parameters
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(EXPERIMENT_NAME)
 
 
 def prepare_data(data):
@@ -118,8 +125,9 @@ def make_predictions_with_model_registry_model(data):
 
     # Load the model and make predictions
     try:
-        # Load model
-        model = mlflow.sklearn.load_model(model_uri=MODEL_LOCATION)
+        # Load the best model from production stage in the Model Registry
+        model = mlflow.sklearn.load_model(model_uri=f"models:/{EXPERIMENT_NAME}/Production")
+
         data['prediction'] = model.predict(X)
         data['prediction_probs'] = np.amax(model.predict_proba(X), axis=1).round(4)
 
@@ -128,6 +136,7 @@ def make_predictions_with_model_registry_model(data):
         data.insert(0, "prediction", preds)
 
     except Exception as e:
+        print("\n***\nNo predictions were made; No model in Production stage or incorrect Model URL.\n***\n")
         print(e)
 
     # Store the predictions and send them to Evidently for monitoring
@@ -197,9 +206,10 @@ def parse_content(content, filename):
 
 
 @credit_app.callback(Output('output-data-upload', 'children'),
-              Input('upload-data', 'contents'),
-              State('upload-data', 'filename'))
+                      Input('upload-data', 'contents'),
+                      State('upload-data', 'filename'))
 def update_output(content, names):
+    set_mlflow()
     if content is not None:
         children = parse_content(content, names)
         return children

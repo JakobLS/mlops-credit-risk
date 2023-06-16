@@ -6,7 +6,6 @@ WORKDIR /app
 
 COPY requirements.txt .
 COPY app_UI_predictions.py .
-ADD ./model/ ./model/
 
 RUN pip3 install -r requirements.txt
 RUN pip3 install evidently==0.1.51.dev0
