@@ -40,6 +40,8 @@ PREDICTIONS_PATH = os.getenv("PREDICTIONS_PATH", "datasets/predictions/predictio
 REGISTRY_PREDICTIONS_PATH = os.getenv("REGISTRY_PREDICTIONS_PATH", 
                                       "datasets/predictions/registry_predictions.csv")
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow_server:5050")
+EXPERIMENT_NAME = "Credit Risk Prediction Model"
+
 
 def set_mlflow(experiment_name):
     # Specify MLflow parameters
@@ -268,7 +270,7 @@ if __name__ == "__main__":
         )
     parser.add_argument(
         "--experiment_name",
-        default="Credit Risk Prediction Model",
+        default=EXPERIMENT_NAME,
         help="MLFlow experiement name"
     )
     parser.add_argument(

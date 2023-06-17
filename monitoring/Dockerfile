@@ -20,6 +20,4 @@ WORKDIR /app
 COPY ["./generate_evidently_report.py", "./"]
 
 # Start the agent and then run the main script to add work to the queue
-ENTRYPOINT sleep 10 && prefect agent start --pool default-agent-pool --work-queue evidently_report_queue && sleep 5
-
-CMD [ "python3", "generate_evidently_report.py" ]
+ENTRYPOINT sleep 10 && prefect agent start --pool default-agent-pool --work-queue evidently_report_queue
