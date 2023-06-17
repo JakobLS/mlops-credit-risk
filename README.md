@@ -35,8 +35,8 @@ The advantage with using such a small dataset is that we get to experiment faste
 - [] Tests
     - [] Unit Tests
     - [] Integration Tests
-- [] CI/CD and Makefile
+- [] CI/CD and [x] Makefile
 - [] GCP Cloud Deployment
-- [] Use Docker containers for each service
+- [x] Use Docker containers for each service
 
 
