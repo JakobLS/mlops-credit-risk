@@ -2,6 +2,7 @@ import json
 import os
 import pandas as pd
 from datetime import datetime, timedelta
+from google.cloud import storage
 
 import mlflow
 from prefect import flow, task
@@ -19,37 +20,51 @@ from evidently.model_profile import Profile
 from evidently.model_profile.sections import (DataDriftProfileSection,
                                               ClassificationPerformanceProfileSection)
 
-REFERENCE_DATA = os.getenv("REFERENCE_DATA", 
-                           "evidently_service/datasets/reference/reference1.csv")
+# Environmental variables will only be fetched from .env file when run locally
+REFERENCE_DATA = os.getenv("REFERENCE_DATA", "datasets/cleaned/reference/reference1.csv")
 REPORT_TIME_WINDOW_MINUTES = int(os.getenv("REPORT_TIME_WINDOW_MINUTES", 180))
 EVIDENTLY_TIME_WIDTH_MINS = int(os.getenv("EVIDENTLY_TIME_WIDTH_MINS", 720))
-REPORTS_FOLDER = os.getenv('REPORTS_FOLDER', "./reports")
-MODEL_LOCATION = os.getenv('MODEL_LOCATION', './prediction_service/model/')
-MONGODB_ADDRESS = os.getenv("MONGODB_ADDRESS", "mongodb://127.0.0.1:27017")
+MONGODB_ADDRESS = os.getenv("MONGODB_ADDRESS", "mongodb://mongo.:27017/")
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow_server:5050")
+EXPERIMENT_NAME = os.getenv("EXPERIMENT_NAME", "Credit Risk Prediction Model")
+GOOGLE_APPLICATION_CREDENTIALS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", 
+                                           "/secrets/mlops-credit-risk-secret.json")
 
 # Define MongoDB client
 mongo_client = MongoClient(MONGODB_ADDRESS)
 
 
 
+@task(name="set_mlflow")
+def set_mlflow():
+    # Specify MLflow parameters
+    mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+    mlflow.set_experiment(EXPERIMENT_NAME)
+
+
 @task
-def load_reference_data(reference_path, model_path):
+def load_reference_data(reference_path):
     """ Load the reference data (including target) and the model. Make predictions.
         Evidently requires both the target and prediction to be present in both the
         reference data and new data. 
     """
-    # Load the model and reference data
-    model = mlflow.sklearn.load_model(model_uri=model_path)
-    reference_data = pd.read_csv(reference_path)
+    try:
+        # Load the model and reference data
+        model = mlflow.sklearn.load_model(model_uri=f"models:/{EXPERIMENT_NAME}/Production")
+        reference_data = pd.read_csv(f"gs://mlops-credit-risk/{reference_path}")
 
-    # Prepare the data by cleaning the column names and excluding the class
-    reference_data.columns = reference_data.columns.str.strip()
-    X = reference_data[reference_data.columns.difference(['target'])]
+        # Prepare the data by cleaning the column names and excluding the class
+        reference_data.columns = reference_data.columns.str.strip()
+        X = reference_data[reference_data.columns.difference(['target'])]
 
-    # Make predictions
-    reference_data['prediction'] = model.predict(X)
+        # Make predictions
+        reference_data['prediction'] = model.predict(X)
 
-    return reference_data
+        return reference_data
+    
+    except Exception as e:
+        print("\n***\nNo predictions were made; No model in Production stage or incorrect Model URL.\n***\n")
+        print(e)
 
 
 def load_mongo_data_between(collection_name, from_dt, to_dt):
@@ -125,9 +140,18 @@ def run_evidently(reference_data, new_data):
     return json.loads(profile.json()), dashboard
 
 
+def upload_report_to_gcp_bucket(filename):
+    storage_client = storage.Client.from_service_account_json(GOOGLE_APPLICATION_CREDENTIALS)
+    bucket = storage_client.get_bucket("mlops-credit-risk")
+    blob = bucket.blob(f"reports/{filename}.html")
+
+    with open("evidently_report.html", "rb") as html_report:
+        blob.upload_from_file(html_report)
+
+
 @task
 def save_report(profile, report, unique_name=False):
-    # Save the profile in MongoDB
+    # Save the profile to MongoDB
     db = mongo_client.get_database("credit_risk_service")
     db.get_collection("evidently_report").insert_one(profile)
 
@@ -136,20 +160,17 @@ def save_report(profile, report, unique_name=False):
         current_time = datetime.now().strftime("%Y-%m-%d--%H-%M")
         filename = f"evidently_report_{current_time}"
     else: 
-        filename = f"evidently_report"
-
-    # Create a new reports folder if not exist
-    if not os.path.exists(REPORTS_FOLDER): 
-        os.mkdir(REPORTS_FOLDER)
-
-    # Save the html report locally
-    report.save(f"{REPORTS_FOLDER}/{filename}.html")
-
+        filename = "evidently_report"
+    
+    # Save the html report. We need to make a work around by first saving it locally
+    report.save("evidently_report.html")
+    upload_report_to_gcp_bucket(filename=filename)
 
 
 @flow(task_runner=SequentialTaskRunner)
 def evidently_report():
-    reference_data = load_reference_data(REFERENCE_DATA, MODEL_LOCATION)
+    set_mlflow()
+    reference_data = load_reference_data(REFERENCE_DATA)
     from_dt = datetime.now() - timedelta(minutes=EVIDENTLY_TIME_WIDTH_MINS)
     new_data = fetch_recent_data(
         from_dt, 
@@ -158,13 +179,12 @@ def evidently_report():
         nbr_samples=100,
     )
     profile, report = run_evidently(reference_data, new_data)
-    save_report(profile, report, unique_name=False)
+    save_report(profile, report, unique_name=True)
 
 
 
 
 if __name__ == "__main__":
-    # evidently_report()
 
     deployment = Deployment.build_from_flow(
         flow=evidently_report,
@@ -174,7 +194,7 @@ if __name__ == "__main__":
             timezone='Europe/Madrid'),
         infrastructure=Process(working_dir=os.getcwd()), # Run flows from current local directory
         version=1,
-        work_queue_name="generate_evidently_report_queue",
+        work_queue_name="evidently_report_queue",
     )
 
     deployment.apply()

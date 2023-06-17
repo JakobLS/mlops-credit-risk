@@ -13,6 +13,8 @@ networks:
 
 services:
   prediction_service:
+    container_name: prediction_service
+    image: prediction_service
     build:
       context: monitoring/prediction_service
       dockerfile: Dockerfile
@@ -21,7 +23,6 @@ services:
       - mongo
     environment:
       EVIDENTLY_SERVICE: "http://evidently_service.:8877"
-      MONGODB_ADDRESS: "mongodb://mongo.:27017/"
       MLFLOW_TRACKING_URI: "http://mlflow_server:5050"
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/mlops-credit-risk-secret.json
     volumes:
@@ -33,6 +34,8 @@ services:
       - front-tier
 
   evidently_service:
+    container_name: evidently_service
+    image: evidently_service
     build:
       context: monitoring/evidently_service
       dockerfile: Dockerfile
@@ -48,6 +51,7 @@ services:
       - front-tier
 
   prometheus:
+    container_name: prometheus
     image: prom/prometheus
     depends_on:
       - mongo
@@ -64,6 +68,7 @@ services:
     restart: always
 
   grafana:
+    container_name: grafana
     image: grafana/grafana
     user: "472"
     depends_on:
@@ -145,7 +150,6 @@ services:
       REPORTS_FOLDER: /tmp/mlreports
       REPORT_TIME_WINDOW_MINUTES: 180
       EVIDENTLY_TIME_WIDTH_MINS: 720
-      MODEL_URI: "models:/Credit Risk Prediction Model/Production"
       GOOGLE_APPLICATION_CREDENTIALS: /secrets/mlops-credit-risk-secret.json
       MLFLOW_TRACKING_URI: "http://mlflow_server:5050"
     volumes:
@@ -156,4 +160,24 @@ services:
       - /Users/jakob/.secrets/mlops-credit-risk-secret.json:/secrets/mlops-credit-risk-secret.json
     networks:
       - back-tier
+  
+  reporting:
+    restart: always
+    container_name: reporting_agent
+    image: reporting_agent
+    build:
+      context: ./monitoring
+      dockerfile: Dockerfile
+    depends_on:
+      - prefect_server
+      - mlflow_server
+      - mongo
+    environment:
+      GOOGLE_APPLICATION_CREDENTIALS: /secrets/mlops-credit-risk-secret.json
+    volumes:
+      - /Users/jakob/.secrets/mlops-credit-risk-secret.json:/secrets/mlops-credit-risk-secret.json
+    networks:
+      - back-tier
+
+
 

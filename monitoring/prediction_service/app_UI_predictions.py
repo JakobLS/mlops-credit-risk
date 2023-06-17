@@ -19,7 +19,7 @@ from prometheus_client import CollectorRegistry, Gauge, push_to_gateway
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow_server:5050")
 EXPERIMENT_NAME = os.getenv("EXPERIMENT_NAME", "Credit Risk Prediction Model")
 EVIDENTLY_SERVICE_ADDRESS = os.getenv('EVIDENTLY_SERVICE_ADDRESS', 'http://evidently_service:8877')
-MONGODB_ADDRESS = os.getenv("MONGODB_ADDRESS", "mongodb://127.0.0.1:27017")
+MONGODB_ADDRESS = os.getenv("MONGODB_ADDRESS", "mongodb://mongo.:27017/")
 PROMETHEUS_SERVICE_ADDRESS = os.getenv('PROMETHEUS_SERVICE_ADDRESS', 'http://127.0.0.1:9091')
 
 # Define MongoDB client and collection
