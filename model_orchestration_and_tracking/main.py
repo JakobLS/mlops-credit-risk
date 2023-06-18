@@ -113,8 +113,10 @@ def log_results_with_mlflow(X, Y, trainX, cv_results, best_model, cv_scores,
     ).iloc[:top_n, :].reset_index(drop=True)
 
     # Log the results with MLflow
+    experiment_id = mlflow.get_experiment_by_name(EXPERIMENT_NAME).experiment_id
     for i in range(top_n):
-        with mlflow.start_run(description=kwargs['description']) as run:
+        with mlflow.start_run(description=kwargs['description'], 
+                              experiment_id=experiment_id) as run:
             # Add tag on run
             mlflow.set_tags(tags=tags)
 
@@ -297,7 +299,7 @@ if __name__ == "__main__":
 
     deployment = Deployment.build_from_flow(
         flow=main,
-        name="model_training_and_prediction_daily",
+        name="model_training_and_prediction_weekly",
         parameters={'kwargs': {**kwargs}},
         schedule=CronSchedule(cron="0 3 * * 1", timezone="Europe/Madrid"), # Run it at 03:00 am every Monday
         infrastructure=Process(working_dir=os.getcwd()), # Run flows from current local directory
