@@ -13,10 +13,14 @@ monitoring/mongo_data/
 monitoring/prometheus_data/
 
 # Predictions
-datasets/predictions/*.csv
+datasets/predictions/*
+model_orchestration_and_tracking/tests/data_for_tests/predictions/
 
 # MLFlow secrets
 secrets/
+
+# Test model
+model_orchestration_and_tracking/tests/model_for_test/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
