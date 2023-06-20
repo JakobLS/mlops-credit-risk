@@ -21,7 +21,7 @@ RUN prefect config view
 WORKDIR /app
 
 ADD ./scripts scripts/
-COPY ["./main.py", "./test_main.py", "./"]
+COPY ["./main.py", "./"]
 
 # Start the agent and then run the main script to add work to the queue
 ENTRYPOINT sleep 15 && prefect agent start --pool default-agent-pool --work-queue credit_risk_model_queue
