@@ -25,9 +25,14 @@ from prefect.deployments import Deployment
 from prefect.server.schemas.schedules import CronSchedule, IntervalSchedule
 from prefect.infrastructure import Process
 
-import scripts.data_preparation as dp
-import scripts.model_predictions as mp
-import scripts.visualisations as vis
+try:
+    import scripts.data_preparation as dp
+    import scripts.model_predictions as mp
+    import scripts.visualisations as vis
+except:
+    import model_orchestration_and_tracking.scripts.data_preparation as dp
+    import model_orchestration_and_tracking.scripts.model_predictions as mp
+    import model_orchestration_and_tracking.scripts.visualisations as vis
 
 # Set a unified random_state across the file
 random_state = 100
