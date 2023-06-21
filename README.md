@@ -83,8 +83,8 @@ At this stage, you can access the different services via the following urls:
 - MLFlow: http://localhost:5051/
 - Prefect UI: http://localhost:4200/
 - Model UI, aka **Risk-O-Meter** (allows you to send data to the model and receive predictions. It's a simple simulation of how a bank clerk might use such a system): http://localhost:9696/
-- Prometheus: http://localhost:9091/ (user/password: admin/admin)
-- Grafana Dashboard: http://localhost:3000/
+- Prometheus: http://localhost:9091/ 
+- Grafana Dashboard: http://localhost:3000/ (default user/password: admin/admin)
 
 
 <br>
@@ -170,7 +170,9 @@ The html version is easier to visually inspect, while the metrics in json format
 
 ## Tests with Pytest
 
-Some basic unit and integration tests are also available. These mainly check that the trained model returns predictions that are roughly accurate. However, this allows us to be fairly confident in that the entire data pre-processing pipeline and model training steps are correct, we are using correct package versions etc. 
+Some basic unit and integration tests are also available. These mainly check that the trained model returns predictions that are by and large accurate. However, this allows us to be fairly confident in that the entire data pre-processing pipeline and model training steps are working as expected, we are using correct package versions etc. 
+
+Since only AUC is taken into account during the tests, they shouldn't be used to decide whether a model is ready for production or not.
 
 Run the tests by initiating them in the VSCode UI, or by executing the following script:
 
