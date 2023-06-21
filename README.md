@@ -140,6 +140,8 @@ In order to create a simple simulation of how a bank clerk might use a decision 
 
 The model's confidence in its prediction for each client is also displayed for the clerk to better asses the prediction.
 
+The Production stage model is automatically fetched in the Risk-O-Meter. 
+
 
 <br>
 
@@ -149,13 +151,16 @@ The model's confidence in its prediction for each client is also displayed for t
 ## Monitoring
 
 - Grafana is used to monitor data drift and Prometheus stores these metrics.
-- Evidently is used to calculate data drift and for more advanced monitoring analysis. The reports are stored in html format in a Google Cloud Bucket and locally in MongoDB.
+- Evidently is used to calculate data drift and for more advanced monitoring analysis. The reports are stored in html format in a Google Cloud Bucket and locally in MongoDB in json format. 
+
 
 ![](images/grafana-dashboard.png)
 
 <br>
 
 [Evidently Report example](monitoring/reports/evidently_report.html)
+
+The html version is easier to visually inspect, while the metrics in json format can be very useful for creating custom visualisations and statistic if needed. 
 
 ![](images/evidently-report-large.png)
 
